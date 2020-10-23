@@ -101,6 +101,8 @@ export function resolveAsyncComponent (
       }
     })
 
+    // 当 reject 执行了之后，不会再执行 resolve 重新加载组件
+    // 过程可以查看 vue-debug/async-component-debug 
     const reject = once(reason => {
       process.env.NODE_ENV !== 'production' && warn(
         `Failed to resolve async component: ${String(factory)}` +
