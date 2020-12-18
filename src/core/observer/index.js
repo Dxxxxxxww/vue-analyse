@@ -204,11 +204,13 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // 如果是数组，且键是合法的 index，通过包装过的 splice 插入数组
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // 如果是响应式对象并且键已经在对象上了就直接赋值，响应式对象会触发 set 方法
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
@@ -221,11 +223,14 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
+  // 如果 target 不是一个响应式对象的话(单纯的是一个普通对象)，就直接赋值给此对象
   if (!ob) {
     target[key] = val
     return val
   }
+  // 如果 target 是响应式对象，并且键不在对象上，就将此键定义成响应式的
   defineReactive(ob.value, key, val)
+  // 并触发通知
   ob.dep.notify()
   return val
 }

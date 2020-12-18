@@ -173,6 +173,8 @@ export function queueWatcher (watcher: Watcher) {
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
       let i = queue.length - 1
+      // queue 已经经过 sort 从小到大排序了
+      // 当 watcher.id 大于 当前队列中的 watcher.id 时，结束循环
       while (i > index && queue[i].id > watcher.id) {
         i--
       }
@@ -181,7 +183,7 @@ export function queueWatcher (watcher: Watcher) {
     // queue the flush
     if (!waiting) {
       waiting = true
-
+      // 不是生产环境且不是异步
       if (process.env.NODE_ENV !== 'production' && !config.async) {
         flushSchedulerQueue()
         return

@@ -117,7 +117,10 @@ export default class Watcher {
       if (this.deep) {
         traverse(value)
       }
+      // 恢复到上一个 watcher
       popTarget()
+      // cleanupDeps 是为了针对类似 v-if v-else 的切换渲染场景，确保已经隐藏了的组件，即便触发事件改变数据，
+      // 也不重新触发 渲染watcher ，提高性能。
       this.cleanupDeps()
     }
     return value
@@ -129,9 +132,11 @@ export default class Watcher {
   addDep (dep: Dep) {
     const id = dep.id
     if (!this.newDepIds.has(id)) {
+      // watcher.newDeps 里保留着 dep
       this.newDepIds.add(id)
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
+        // dep.subs 保留着 watcher
         dep.addSub(this)
       }
     }
@@ -145,10 +150,12 @@ export default class Watcher {
     while (i--) {
       const dep = this.deps[i]
       if (!this.newDepIds.has(dep.id)) {
+        // 清空 dep 中保留的 watcher
         dep.removeSub(this)
       }
     }
     let tmp = this.depIds
+    // 把 watcher 中保留的 旧的 dep 清除
     this.depIds = this.newDepIds
     this.newDepIds = tmp
     this.newDepIds.clear()

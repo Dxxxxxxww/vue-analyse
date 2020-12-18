@@ -25,16 +25,44 @@ export function validateProp (
   vm?: Component
 ): any {
   const prop = propOptions[key]
+  // 如果子组件定义了 prop 而父组件没有给它传值
   const absent = !hasOwn(propsData, key)
   let value = propsData[key]
-  // boolean casting
+  // boolean casting 处理 Boolean 类型的 props
   const booleanIndex = getTypeIndex(Boolean, prop.type)
   if (booleanIndex > -1) {
+    // prop 没有接收到值，且没有定义默认值
     if (absent && !hasOwn(prop, 'default')) {
       value = false
+      // hyphenate 将驼峰变为连字符
     } else if (value === '' || value === hyphenate(key)) {
       // only cast empty string / same name to boolean if
       // boolean has higher priority
+      // stringIndex < 0
+      // 这里就是为什么子组件的 props 如果定义的类型是 Boolean
+      // 在使用时可以只写 props 或者 props="props" 而不需要写 :props="true"
+      // 的原因
+      // <child-component fixed /> 不管 prop 是什么类型，当只写了属性名而不写 = 和值，的时候，默认传递的是空字符串 ''
+      // <child-component fixed="fixed" />
+
+      /* 
+        // 对于组件 A， booleanIndex < stringIndex  value = true
+        // Child Component A 
+        export default {
+          name: 'ChildComponentA'
+          props: {
+              fixed: [Boolean, String]
+            }
+          }
+        // 对于组件 B， booleanIndex > stringIndex  value 不做处理
+        // Child Component B
+        export default {
+          name: 'ChildComponentB',
+          props: {
+            fixed: [String, Boolean]
+          }
+        }
+      */
       const stringIndex = getTypeIndex(String, prop.type)
       if (stringIndex < 0 || booleanIndex < stringIndex) {
         value = true
@@ -46,6 +74,7 @@ export function validateProp (
     value = getPropDefaultValue(vm, prop, key)
     // since the default value is a fresh copy,
     // make sure to observe it.
+    // 因为默认值是一个新拷贝，所以一定要 observe 一下。
     const prevShouldObserve = shouldObserve
     toggleObserving(true)
     observe(value)
@@ -54,8 +83,9 @@ export function validateProp (
   if (
     process.env.NODE_ENV !== 'production' &&
     // skip validation for weex recycle-list child component props
-    !(__WEEX__ && isObject(value) && ('@binding' in value))
+    !(__WEEX__ && isObject(value) && '@binding' in value)
   ) {
+    // 断言分三种情况 required， type 为数组，用户提供了 validator
     assertProp(prop, key, value, vm, absent)
   }
   return value
@@ -71,17 +101,23 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   }
   const def = prop.default
   // warn against non-factory defaults for Object & Array
+  // 如果 prop.default 是一个引用类型则必须使用函数返回的形式来定义
   if (process.env.NODE_ENV !== 'production' && isObject(def)) {
     warn(
-      'Invalid default value for prop "' + key + '": ' +
-      'Props with type Object/Array must use a factory function ' +
-      'to return the default value.',
+      'Invalid default value for prop "' +
+        key +
+        '": ' +
+        'Props with type Object/Array must use a factory function ' +
+        'to return the default value.',
       vm
     )
   }
   // the raw prop value was also undefined from previous render,
   // return previous default value to avoid unnecessary watcher trigger
-  if (vm && vm.$options.propsData &&
+  // props 更新时的流程
+  if (
+    vm &&
+    vm.$options.propsData &&
     vm.$options.propsData[key] === undefined &&
     vm._props[key] !== undefined
   ) {
@@ -89,6 +125,7 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   }
   // call factory function for non-Function types
   // a value is Function if its prototype is function even across different execution context
+  // 判断类型来获取 default 值，如果是函数则执行，如果不是直接返回。
   return typeof def === 'function' && getType(prop.type) !== 'Function'
     ? def.call(vm)
     : def
@@ -104,11 +141,9 @@ function assertProp (
   vm: ?Component,
   absent: boolean
 ) {
+  // require 断言
   if (prop.required && absent) {
-    warn(
-      'Missing required prop: "' + name + '"',
-      vm
-    )
+    warn('Missing required prop: "' + name + '"', vm)
     return
   }
   if (value == null && !prop.required) {
@@ -117,10 +152,12 @@ function assertProp (
   let type = prop.type
   let valid = !type || type === true
   const expectedTypes = []
+  // 类型断言
   if (type) {
     if (!Array.isArray(type)) {
       type = [type]
     }
+    // 只要当前props的类型和类型数组中某一个元素匹配则终止遍历
     for (let i = 0; i < type.length && !valid; i++) {
       const assertedType = assertType(value, type[i])
       expectedTypes.push(assertedType.expectedType || '')
@@ -129,13 +166,11 @@ function assertProp (
   }
 
   if (!valid) {
-    warn(
-      getInvalidTypeMessage(name, value, expectedTypes),
-      vm
-    )
+    warn(getInvalidTypeMessage(name, value, expectedTypes), vm)
     return
   }
   const validator = prop.validator
+  // 用户自定义 validator 断言
   if (validator) {
     if (!validator(value)) {
       warn(
@@ -154,6 +189,7 @@ function assertType (value: any, type: Function): {
 } {
   let valid
   const expectedType = getType(type)
+  // 判断传入的 prop 值的类型是否与所需的 prop 类型相同
   if (simpleCheckRE.test(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()

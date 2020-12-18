@@ -11,30 +11,34 @@ let uid = 0
  * directives subscribing to it.
  */
 export default class Dep {
-  static target: ?Watcher;
-  id: number;
-  subs: Array<Watcher>;
+  static target: ?Watcher
+  id: number
+  subs: Array<Watcher>
 
-  constructor () {
+  constructor() {
     this.id = uid++
     this.subs = []
   }
 
-  addSub (sub: Watcher) {
+  // 由劫持后的 get访问函数触发dep.depend ， dep.depend 中的 watcher 实例的 addDep 方法 调用
+  // 保存了所有 watcher 包括渲染watcher，user watcher，computed watcher
+  addSub(sub: Watcher) {
+    // dep.subs 保留着所有访问到
     this.subs.push(sub)
   }
 
-  removeSub (sub: Watcher) {
+  removeSub(sub: Watcher) {
     remove(this.subs, sub)
   }
 
-  depend () {
+  depend() {
     if (Dep.target) {
+      // watcher.newDeps 里保留着 dep
       Dep.target.addDep(this)
     }
   }
 
-  notify () {
+  notify() {
     // stabilize the subscriber list first
     const subs = this.subs.slice()
     if (process.env.NODE_ENV !== 'production' && !config.async) {
@@ -55,6 +59,7 @@ export default class Dep {
 Dep.target = null
 const targetStack = []
 
+// 栈 保留着每一次 Watcher.prototype.get 触发时的 watcher 实例（渲染watcher）
 export function pushTarget (target: ?Watcher) {
   targetStack.push(target)
   Dep.target = target
