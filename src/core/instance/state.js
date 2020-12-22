@@ -46,7 +46,7 @@ export function proxy (target: Object, sourceKey: string, key: string) {
 }
 /**
  * @description 初始化 props、data、methods、watch、computed 等属性
- * @param {*} vm 
+ * @param {*} vm
  */
 export function initState (vm: Component) {
   vm._watchers = []
@@ -171,6 +171,7 @@ const computedWatcherOptions = { lazy: true }
 
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
+  // 这句代码很重要
   const watchers = vm._computedWatchers = Object.create(null)
   // computed properties are just getters during SSR
   const isSSR = isServerRendering()
@@ -198,7 +199,10 @@ function initComputed (vm: Component, computed: Object) {
     // component-defined computed properties are already defined on the
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
+    // 组件定义的计算属性已经在组件原型上定义。  vue.extend  位于global-api/extend
+    // 我们只需要定义在实例化时定义的计算属性。
     if (!(key in vm)) {
+      // 定义计算属性的真正函数
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
       if (key in vm.$data) {
@@ -242,6 +246,8 @@ export function defineComputed (
 }
 
 function createComputedGetter (key) {
+  // 这个返回的函数就是计算属性在调用时所执行的函数
+  // 而我们在 vue 中定义计算属性时的函数会在 evaluate 函数中调用(get)
   return function computedGetter () {
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {
@@ -249,6 +255,9 @@ function createComputedGetter (key) {
         watcher.evaluate()
       }
       if (Dep.target) {
+        // computed watcher .deps 必定有值，是因为计算属性访问了 data，
+        // 在 data 的 get 中进行了依赖收集，data 中的值被 computed watcher 订阅了
+        // 所以 computed watcher 的 deps 里面都是 data 的 dep
         watcher.depend()
       }
       return watcher.value

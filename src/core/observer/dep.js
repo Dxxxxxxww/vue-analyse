@@ -24,6 +24,7 @@ export default class Dep {
   // 保存了所有 watcher 包括渲染watcher，user watcher，computed watcher
   addSub(sub: Watcher) {
     // dep.subs 保留着所有访问到
+    // 让依赖知道有哪些watcher订阅了自己 收集watcher
     this.subs.push(sub)
   }
 
@@ -34,6 +35,10 @@ export default class Dep {
   depend() {
     if (Dep.target) {
       // watcher.newDeps 里保留着 dep
+      // 让渲染watcher 订阅 这个 dep（收集依赖）
+
+      // computed watcher 中 引用的 data 依赖，所收集的是渲染watcher，
+      // 因为 computed watcher 计算结束后将computed watcher pop 出去了
       Dep.target.addDep(this)
     }
   }
@@ -59,7 +64,7 @@ export default class Dep {
 Dep.target = null
 const targetStack = []
 
-// 栈 保留着每一次 Watcher.prototype.get 触发时的 watcher 实例（渲染watcher）
+// 栈 保留着每一次 Watcher.prototype.get 触发时的 watcher 实例（不仅仅只是渲染watcher）
 export function pushTarget (target: ?Watcher) {
   targetStack.push(target)
   Dep.target = target

@@ -434,31 +434,38 @@ export function createPatchFunction (backend) {
       } else if (isUndef(oldEndVnode)) {
         oldEndVnode = oldCh[--oldEndIdx]
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
+        // 这里的几个判断是为了优化，毕竟如果新老有相同的话直接复用会比重新渲染 dom 要好些
         patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue, newCh, newStartIdx)
         oldStartVnode = oldCh[++oldStartIdx]
         newStartVnode = newCh[++newStartIdx]
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        // 这里的几个判断是为了优化，毕竟如果新老有相同的话直接复用会比重新渲染 dom 要好些
         patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue, newCh, newEndIdx)
         oldEndVnode = oldCh[--oldEndIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldStartVnode, newEndVnode)) { // Vnode moved right
+        // 这里的几个判断是为了优化，毕竟如果新老有相同的话直接复用会比重新渲染 dom 要好些
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue, newCh, newEndIdx)
         canMove && nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm))
         oldStartVnode = oldCh[++oldStartIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldEndVnode, newStartVnode)) { // Vnode moved left
+        // 这里的几个判断是为了优化，毕竟如果新老有相同的话直接复用会比重新渲染 dom 要好些
         patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue, newCh, newStartIdx)
         canMove && nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm)
         oldEndVnode = oldCh[--oldEndIdx]
         newStartVnode = newCh[++newStartIdx]
       } else {
+        // 如果以上逻辑都匹配不到，再把所有旧子节点的 key 做一个映射表，然后用新 vnode 的 key 去找出在旧节点中可以复用的位置。
         if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
         idxInOld = isDef(newStartVnode.key)
           ? oldKeyToIdx[newStartVnode.key]
           : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx)
         if (isUndef(idxInOld)) { // New element
+          // 如果没有匹配的，就重新生成新节点
           createElm(newStartVnode, insertedVnodeQueue, parentElm, oldStartVnode.elm, false, newCh, newStartIdx)
         } else {
+          // 新旧节点有可以复用的位置，就进行复用
           vnodeToMove = oldCh[idxInOld]
           if (sameVnode(vnodeToMove, newStartVnode)) {
             patchVnode(vnodeToMove, newStartVnode, insertedVnodeQueue, newCh, newStartIdx)
@@ -545,16 +552,21 @@ export function createPatchFunction (backend) {
       vnode.componentInstance = oldVnode.componentInstance
       return
     }
-
+    // 对于插槽而言，2.6.x 的版本 不管是普通插槽还是作用域插槽，其所收集的依赖都是子组件的 render watcher
     let i
     const data = vnode.data
+    // 占位符vnode children，parent 属性都为 undefined，child 是它的 渲染vnode
+    // 渲染vnode child 为 undefined parent 是它的 占位符vnode，children视情况而定
+    // 普通渲染节点 data child parent 都为 undefined，children视情况而定
     if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
+      // 父组件更新时，当递归到子组件(不是子节点)的占位符vnode会执行 prepatch
       i(oldVnode, vnode)
     }
 
     const oldCh = oldVnode.children
     const ch = vnode.children
     if (isDef(data) && isPatchable(vnode)) {
+      // 执行 web/runtime/modules/index 里的各种钩子
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
@@ -752,6 +764,7 @@ export function createPatchFunction (backend) {
         }
 
         // replacing existing element
+        // elm 是 dom节点
         const oldElm = oldVnode.elm
         const parentElm = nodeOps.parentNode(oldElm)
 
@@ -768,12 +781,14 @@ export function createPatchFunction (backend) {
 
         // update parent placeholder node element, recursively
         if (isDef(vnode.parent)) {
+          // 将渲染vnode 的 parent，也就是占位符vnode $vnode 保存下来
           let ancestor = vnode.parent
           const patchable = isPatchable(vnode)
           while (ancestor) {
             for (let i = 0; i < cbs.destroy.length; ++i) {
               cbs.destroy[i](ancestor)
             }
+            // elm 是 dom节点 更改占位符vnode 的 dom 引用
             ancestor.elm = vnode.elm
             if (patchable) {
               for (let i = 0; i < cbs.create.length; ++i) {

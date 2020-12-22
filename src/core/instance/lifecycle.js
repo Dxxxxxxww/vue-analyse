@@ -228,6 +228,7 @@ export function mountComponent(
   return vm;
 }
 
+// 父组件更新时，它的子组件的占位符节点会进入这个函数
 export function updateChildComponent(
   vm: Component,
   propsData: ?Object,
@@ -241,12 +242,32 @@ export function updateChildComponent(
 
   // determine whether component has slot children
   // we need to do this before overwriting $options._renderChildren.
+  // 确定组件是否有插槽子组件
+  // 我们需要在覆盖$options._renderChildren之前这样做。
 
   // check if there are dynamic scopedSlots (hand-written or compiled but with
   // dynamic slot names). Static scoped slots compiled from template has the
   // "$stable" marker.
+  // 检查是否有动态scopedSlots(手写或编译，但使用
+  // 动态槽名称)。从模板编译的静态作用域插槽具有
+  // “$stable”标记。
+
+  // 对于插槽而言，2.6.x 的版本 不管是普通插槽还是作用域插槽，其所收集的依赖都是子组件的 render watcher
   const newScopedSlots = parentVnode.data.scopedSlots;
   const oldScopedSlots = vm.$scopedSlots;
+  // ssh:
+  // 检查 $stable =》 slot 是否是稳定的（v-if, v-show）
+  // 有如下三种情况会强制触发子组件更新：
+  // 1.scopedSlots 上的 $stable 属性为 false
+  // 简单来说，就是用到了一些动态语法的情况下，就会通知子组件对这段 scopedSlots 进行强制更新。
+  // 2.也是 $stable 属性相关，旧的 scopedSlots 不稳定 旧的scopedSlots需要强制更新，那么渲染后一定要强制更新。
+  // 3.旧的 $key 不等于新的 $key
+
+
+  // 在优化上，Vue 2.6 也尽可能的让 slot 的更新不触发父组件的渲染，
+  // 通过一系列巧妙的判断和算法去尽可能避免不必要的渲染。
+  // （在 2.5 的版本中，由于生成 slot 的作用域是在父组件中，所以明明是子组件的插槽 slot 的更新是会带着父组件一起更新的）
+
   const hasDynamicScopedSlot = !!(
     (newScopedSlots && !newScopedSlots.$stable) ||
     (oldScopedSlots !== emptyObject && !oldScopedSlots.$stable) ||
@@ -256,6 +277,9 @@ export function updateChildComponent(
   // Any static slot children from the parent may have changed during parent's
   // update. Dynamic scoped slots may also have changed. In such cases, a forced
   // update is necessary to ensure correctness.
+  // 来自父节点的任何静态插槽子节点可能在父节点的过程中发生了更改
+  // 更新。动态作用域插槽也可能发生了变化。在这种情况下，一个强制
+  // 更新是必要的，以确保正确性。
   const needsForceUpdate = !!(
     renderChildren || // has new static slots
     vm.$options._renderChildren || // has old static slots
@@ -280,11 +304,13 @@ export function updateChildComponent(
   // update props
   if (propsData && vm.$options.props) {
     toggleObserving(false);
+    // 注意props被指向了 _props
     const props = vm._props;
     const propKeys = vm.$options._propKeys || [];
     for (let i = 0; i < propKeys.length; i++) {
       const key = propKeys[i];
       const propOptions: any = vm.$options.props; // wtf flow?
+      // 就是这句话，触发了对于 _props.msg 的依赖更新。
       props[key] = validateProp(key, propOptions, propsData, vm);
     }
     toggleObserving(true);
@@ -299,6 +325,7 @@ export function updateChildComponent(
   updateComponentListeners(vm, listeners, oldListeners);
 
   // resolve slots + force update if has children
+  // 这里的 vm 对应 test 也就是子组件的实例，相当于触发了子组件强制渲染。
   if (needsForceUpdate) {
     vm.$slots = resolveSlots(renderChildren, parentVnode.context);
     vm.$forceUpdate();

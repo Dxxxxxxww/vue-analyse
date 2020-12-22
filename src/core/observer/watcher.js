@@ -131,6 +131,7 @@ export default class Watcher {
    */
   addDep (dep: Dep) {
     const id = dep.id
+    // 依赖收集不会重复收集已存在的
     if (!this.newDepIds.has(id)) {
       // watcher.newDeps 里保留着 dep
       this.newDepIds.add(id)
@@ -223,6 +224,12 @@ export default class Watcher {
   /**
    * Depend on all deps collected by this watcher.
    */
+  // 当 createComputedGetter 中调用 watcher.depend() 时
+  // computed watcher .deps 必定有值，是因为计算属性访问了 data，
+  // 在 data 的 get 中进行了依赖收集，data 中的值被 computed watcher 订阅了
+  // 所以 computed watcher 的deps里面都是 data 的 dep
+  // data 的 subs 里面 会有 computed watcher ，再经过下面的循环之后又会增加 render watcher
+  // 这样一来，当 data 更新后，就会更新 computed watcher，然后通知 render watcher 重新渲染
   depend () {
     let i = this.deps.length
     while (i--) {

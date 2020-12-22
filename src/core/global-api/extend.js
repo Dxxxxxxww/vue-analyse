@@ -32,12 +32,12 @@ export function initExtend (Vue: GlobalAPI) {
 
     const Sub = function VueComponent (options) {
       // 组件的实例化时，传递的这个 options 是在 create-component.js 中的
-      /* 
+      /*
       const options: InternalComponentOptions = {
         _isComponent: true,
         _parentVnode: vnode, // 占位符 vnode 占位节点
         parent, // 当前 vm 实例。子组件的父级 vm 实例
-      } 
+      }
       */
       this._init(options);
     }
@@ -55,9 +55,11 @@ export function initExtend (Vue: GlobalAPI) {
     // For props and computed properties, we define the proxy getters on
     // the Vue instances at extension time, on the extended prototype. This
     // avoids Object.defineProperty calls for each instance created.
+    // 对于组件而言，真正 initProps 的过程是发生在这里
     if (Sub.options.props) {
       initProps(Sub)
     }
+    // 对于组件而言，真正 initComputed 的过程是发生在这里
     if (Sub.options.computed) {
       initComputed(Sub)
     }
