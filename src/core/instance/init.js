@@ -36,6 +36,7 @@ export function initMixin(Vue: Class<Component>) {
       // internal component options needs special treatment.
       initInternalComponent(vm, options);
     } else {
+      // 在 mergeOptions 中对 props 进行 normalizeProps
       vm.$options = mergeOptions(
         // 构造函数的 options
         resolveConstructorOptions(vm.constructor),
