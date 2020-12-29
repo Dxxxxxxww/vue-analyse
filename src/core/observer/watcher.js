@@ -104,6 +104,9 @@ export default class Watcher {
     let value
     const vm = this.vm
     try {
+      // 对于 render watcher 来说，这一步是去（重新）渲染，在实例化时就调用。
+      // 对于 user watcher 来说，这一步是 通过 watcher.evaluate 来调用的，而不是在实例化时就调用。
+      // 对于 user watcher 来说，这一步只是访问 data 属性，用来收集依赖，在实例化时就调用。
       value = this.getter.call(vm, vm)
     } catch (e) {
       if (this.user) {
@@ -173,10 +176,12 @@ export default class Watcher {
   update () {
     /* istanbul ignore else */
     if (this.lazy) {
+      // computed watcher 走这边
       this.dirty = true
     } else if (this.sync) {
       this.run()
     } else {
+      // render watcher user watcher 走这边
       queueWatcher(this)
     }
   }
