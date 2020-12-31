@@ -66,9 +66,12 @@ export function initState (vm: Component) {
 
 function initProps (vm: Component, propsOptions: Object) {
   const propsData = vm.$options.propsData || {}
+  // 存储 validateProp 计算后的 props 值
   const props = vm._props = {}
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
+
+  // props 更新时用的
   const keys = vm.$options._propKeys = []
   const isRoot = !vm.$parent
   // root instance props should be converted

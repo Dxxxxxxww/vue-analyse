@@ -18,6 +18,13 @@ type PropOptions = {
   validator: ?Function
 };
 
+/**
+ * @param {*} key props 中的 key
+ * @param {*} propOptions 组件的 props 属性
+ * @param {*} propsData 父组件传递的 props
+ * @param {*} vm 组件实例
+ * @returns {*}
+ */
 export function validateProp (
   key: string,
   propOptions: Object,
@@ -28,8 +35,10 @@ export function validateProp (
   // 如果子组件定义了 prop 而父组件没有给它传值
   const absent = !hasOwn(propsData, key)
   let value = propsData[key]
-  // boolean casting 处理 Boolean 类型的 props
+  // boolean casting
+  // 处理 Boolean 类型的 props
   const booleanIndex = getTypeIndex(Boolean, prop.type)
+  // 如果有 boolean 类型的值
   if (booleanIndex > -1) {
     // prop 没有接收到值，且没有定义默认值
     if (absent && !hasOwn(prop, 'default')) {
@@ -40,21 +49,21 @@ export function validateProp (
       // boolean has higher priority
       // stringIndex < 0
       // 这里就是为什么子组件的 props 如果定义的类型是 Boolean
-      // 在使用时可以只写 props 或者 props="props" 而不需要写 :props="true"
+      // 在使用时可以只写 props 或者 props="props-props" 而不需要写 :props="true"
       // 的原因
       // <child-component fixed /> 不管 prop 是什么类型，当只写了属性名而不写 = 和值，的时候，默认传递的是空字符串 ''
       // <child-component fixed="fixed" />
 
-      /* 
-        // 对于组件 A， booleanIndex < stringIndex  value = true
-        // Child Component A 
+      /*
+        // 对于组件 A， booleanIndex < stringIndex，boolean 的优先级大于 string， value = true
+        // Child Component A
         export default {
           name: 'ChildComponentA'
           props: {
               fixed: [Boolean, String]
             }
           }
-        // 对于组件 B， booleanIndex > stringIndex  value 不做处理
+        // 对于组件 B， booleanIndex > stringIndex，string 的优先级大于 boolean， value 不做处理
         // Child Component B
         export default {
           name: 'ChildComponentB',
@@ -64,6 +73,7 @@ export function validateProp (
         }
       */
       const stringIndex = getTypeIndex(String, prop.type)
+      // boolean 类型的优先级 高于 string 类型
       if (stringIndex < 0 || booleanIndex < stringIndex) {
         value = true
       }
@@ -114,7 +124,16 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
   }
   // the raw prop value was also undefined from previous render,
   // return previous default value to avoid unnecessary watcher trigger
-  // props 更新时的流程
+  // 这个是发生在 props 更新时的流程
+  // 发生在以下场景:
+  /*
+  * 1. 父组件没有给子组件传值，并且子组件的 props 定义了 default。
+  * 2. 当第一次渲染时，就会拿默认值作为值
+  * 3. 当发生更新时，就直接获取这个值就行。
+  * 4. 假如说没有这一步操作，并且当我们的 props 是一个引用类型的时候，
+  *    当发生更新时就会重新执行一遍 default 函数（就是最后的那段代码），这样返回的引用类型就不是同一个了，
+  *    就会触发 user watcher（如果定义了） 的 callback，这一步是没有必要的。
+  * */
   if (
     vm &&
     vm.$options.propsData &&
@@ -225,9 +244,11 @@ function isSameType (a, b) {
 }
 
 function getTypeIndex (type, expectedTypes): number {
+  // 组件的 props 如果是普通写法 propsA: Boolean
   if (!Array.isArray(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
+  // 组件的 props 如果是数组的写法 propsA: [Boolean, String]
   for (let i = 0, len = expectedTypes.length; i < len; i++) {
     if (isSameType(expectedTypes[i], type)) {
       return i
