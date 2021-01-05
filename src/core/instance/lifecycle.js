@@ -170,12 +170,14 @@ export function mountComponent(
       }
     }
   }
+  // 调用生命周期钩子
   // 先父后子
   callHook(vm, "beforeMount");
 
   let updateComponent;
   /* istanbul ignore if */
   if (process.env.NODE_ENV !== "production" && config.performance && mark) {
+    // 主要做性能埋点相关，这里会在开启浏览器performance时用到
     updateComponent = () => {
       const name = vm._name;
       const id = vm._uid;
@@ -192,6 +194,7 @@ export function mountComponent(
       mark(endTag);
       measure(`vue ${name} patch`, startTag, endTag);
     };
+    // 定义 updateComponent
   } else {
     updateComponent = () => {
       vm._update(vm._render(), hydrating);
@@ -201,6 +204,10 @@ export function mountComponent(
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 定义渲染 watcher
+  // 渲染 Watcher 的第二个参数传递了我们的 updateComponent，
+  // 这个参数会在渲染 Watcher 实例化的时候赋值给 this.getter 属性，
+  // 当进行派发更新的时候，会遍历 subs 数组执行 update，然后调用 this.getter，也就是再次调用 updateComponent，然后让组件重新渲染。
   new Watcher(
     vm,
     updateComponent,
@@ -208,6 +215,7 @@ export function mountComponent(
     {
       before() {
         if (vm._isMounted && !vm._isDestroyed) {
+          // 调用生命周期钩子
           callHook(vm, "beforeUpdate");
         }
       },
@@ -222,6 +230,7 @@ export function mountComponent(
   if (vm.$vnode == null) {
     // 这里不是组件的挂载，组件的挂载在 create-component.js insert 钩子中
     vm._isMounted = true;
+    // 调用生命周期钩子
     // 先子后父
     callHook(vm, "mounted");
   }
@@ -311,6 +320,7 @@ export function updateChildComponent(
       const key = propKeys[i];
       const propOptions: any = vm.$options.props; // wtf flow?
       // 就是这句话，触发了对于 _props.msg 的依赖更新。
+      // 对 props 再做一次求值
       props[key] = validateProp(key, propOptions, propsData, vm);
     }
     toggleObserving(true);

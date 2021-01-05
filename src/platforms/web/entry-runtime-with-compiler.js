@@ -14,11 +14,16 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+// 注意：其实我们使用 Vue-Cli 脚手架创建的项目，组件在 $mount 方法执行的时候，
+// 已经存在 render 函数了，这是因为 vue-loader 已经帮我们把 template 转换为 render 函数了，
+// 因此对于大多数情况来说不会走处理 template 的过程，只有少部分特殊情况才会走 template 处理。
 const mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
 ): Component {
+  // 获取 el 元素
+  // 这个 el 是挂载目标，而 render 函数则是被挂载者
   el = el && query(el)
 
   /* istanbul ignore if */
@@ -31,10 +36,15 @@ Vue.prototype.$mount = function (
 
   const options = this.$options
   // resolve template/el and convert to render function
+  // 处理 template，处理被挂载目标
+  // 在编译版本中，获取 render 优先级关系是 render > template > el
+  // 如果没有 render 函数的话
   if (!options.render) {
     let template = options.template
+    // 判断有没有 template
     if (template) {
       if (typeof template === 'string') {
+        // template 可以是一个 DOM 节点的 id
         if (template.charAt(0) === '#') {
           template = idToTemplate(template)
           /* istanbul ignore if */
@@ -45,6 +55,7 @@ Vue.prototype.$mount = function (
             )
           }
         }
+        // 接受一个 DOM 元素节点
       } else if (template.nodeType) {
         template = template.innerHTML
       } else {
@@ -53,6 +64,7 @@ Vue.prototype.$mount = function (
         }
         return this
       }
+      // 如果没有 template 就使用 el.outerHTML
     } else if (el) {
       template = getOuterHTML(el)
     }
@@ -62,6 +74,7 @@ Vue.prototype.$mount = function (
         mark('compile')
       }
 
+      // 把 template 编译成 render
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
         shouldDecodeNewlines,
@@ -79,6 +92,8 @@ Vue.prototype.$mount = function (
       }
     }
   }
+  // 挂载
+  // 如果有 render 函数，直接挂载
   return mount.call(this, el, hydrating)
 }
 

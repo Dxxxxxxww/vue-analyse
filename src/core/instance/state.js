@@ -91,6 +91,7 @@ function initProps (vm: Component, propsOptions: Object) {
           vm
         )
       }
+      // 对 props 做响应式代理时，就把键值加到 vm._props 上了
       defineReactive(props, key, value, () => {
         if (!isRoot && !isUpdatingChildComponent) {
           warn(
