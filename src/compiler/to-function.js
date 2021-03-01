@@ -19,6 +19,10 @@ function createFunction (code, errors) {
 }
 
 export function createCompileToFunctionFn (compile: Function): Function {
+  // 在组件编译的时候，对于同一个组件而言我们应该只编译一次。
+  // 当第一次编译完成后，我们应该把编译结果缓存起来，
+  // 下一次遇到相同组件再次编译的时候先从缓存里面去获取，如果缓存里面有则直接返回
+  // 缓存处理，编译优化
   const cache = Object.create(null)
 
   return function compileToFunctions (

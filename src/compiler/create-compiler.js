@@ -6,6 +6,7 @@ import { createCompileToFunctionFn } from './to-function'
 
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
+    // baseCompile 的包裹函数
     function compile (
       template: string,
       options?: CompilerOptions
@@ -57,7 +58,7 @@ export function createCompilerCreator (baseCompile: Function): Function {
       }
 
       finalOptions.warn = warn
-
+      // 关键代码，编译执行
       const compiled = baseCompile(template.trim(), finalOptions)
       if (process.env.NODE_ENV !== 'production') {
         detectErrors(compiled.ast, warn)
